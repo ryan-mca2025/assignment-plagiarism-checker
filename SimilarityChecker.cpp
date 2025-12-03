@@ -1,54 +1,52 @@
 #include "SimilarityChecker.h"
-#include <cmath>       // For sqrt()
-#include <algorithm>   // For std::min, std::max if needed
+#include <cmath>
+#include <algorithm>
 
 /*
-    ========================================================================
-                                Constructor
-    ========================================================================
+-------------------------------------------------
+Function Name : SimilarityChecker (Constructor)
 
-    Objective:
-        Initialize internal TF-IDF vector storage and document names.
+Objective:
+    Initialize TF-IDF vectors and document names for comparison.
 
-    Input:
-        vectors : A vector containing TF-IDF maps for each document.
-        names   : A vector containing corresponding document names.
+Input:
+    vectors → TF-IDF maps for each document.
+    names   → Document file names.
 
-    Output:
-        None.
+Output:
+    Object initialized.
 
-    Side Effects:
-        Stores TF-IDF vectors and names for later similarity computations.
+Side Effect:
+    Stores vectors and names internally.
+
+Approach:
+    Assign vectors and names to internal variables.
 */
 SimilarityChecker::SimilarityChecker(
         const std::vector<std::map<std::string, double>>& vectors,
         const std::vector<std::string>& names)
     : tfidfVectors(vectors), documentNames(names) {
-    // Nothing else required — data stored and ready for computation
 }
 
 /*
-    ========================================================================
-                                 dotProduct()
-    ========================================================================
+-------------------------------------------------
+Function Name : dotProduct()
 
-    Objective:
-        Compute the dot product of two sparse TF-IDF vectors.
+Objective:
+    Compute scalar dot product of two TF-IDF vectors.
 
-    Input:
-        vec1, vec2 → maps<string term, double tfidfValue>
+Input:
+    vec1 → TF-IDF vector for first document.
+    vec2 → TF-IDF vector for second document.
 
-    Output:
-        Double representing sum(term_i(tfidf1 * tfidf2))
+Output:
+    Double representing dot product value.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Choose the smaller vector for iteration (optimization).
-        - For each term in smaller vector:
-              - Check if the term exists in the larger vector.
-              - If found → multiply the two TF-IDF values and accumulate.
+Approach:
+    Iterate over smaller vector and multiply values where keys match.
 */
 double SimilarityChecker::dotProduct(
         const std::map<std::string, double>& vec1,
@@ -56,21 +54,16 @@ double SimilarityChecker::dotProduct(
 
     double result = 0.0;
 
-    // Determine which vector is smaller, to reduce lookup operations
     const auto& smaller = (vec1.size() < vec2.size()) ? vec1 : vec2;
     const auto& larger  = (vec1.size() < vec2.size()) ? vec2 : vec1;
 
-    // Iterate only through smaller vector
     for (const auto& pair : smaller) {
         const std::string& term = pair.first;
         double value1 = pair.second;
 
-        // Find matching term in larger vector
         auto it = larger.find(term);
         if (it != larger.end()) {
             double value2 = it->second;
-
-            // Accumulate TF-IDF1 * TF-IDF2
             result += value1 * value2;
         }
     }
@@ -79,76 +72,68 @@ double SimilarityChecker::dotProduct(
 }
 
 /*
-    ========================================================================
-                                 magnitude()
-    ========================================================================
+-------------------------------------------------
+Function Name : magnitude()
 
-    Objective:
-        Compute Euclidean norm (magnitude) of a TF-IDF vector.
+Objective:
+    Compute vector magnitude (Euclidean length).
 
-    Input:
-        vec → map<string term, double tfidfValue>
+Input:
+    vec → TF-IDF vector.
 
-    Output:
-        sqrt(sum of squares of values)
+Output:
+    Double representing magnitude.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Square each TF-IDF weight and accumulate.
-        - Apply sqrt() to get final magnitude.
+Approach:
+    Square each value, sum them, then take square root.
 */
 double SimilarityChecker::magnitude(
         const std::map<std::string, double>& vec) const {
 
     double sum = 0.0;
 
-    // Compute sum of squares
     for (const auto& pair : vec) {
         double value = pair.second;
         sum += value * value;
     }
 
-    // Square root of sum of squares
     return std::sqrt(sum);
 }
 
 /*
-    ========================================================================
-                              cosineSimilarity()
-    ========================================================================
+-------------------------------------------------
+Function Name : cosineSimilarity()
 
-    Objective:
-        Compute cosine similarity between two TF-IDF document vectors:
-            similarity = (vec1 · vec2) / (|vec1| * |vec2|)
+Objective:
+    Compute similarity between two documents using cosine similarity formula.
 
-    Input:
-        doc1Index → index of first document
-        doc2Index → index of second document
+Input:
+    doc1Index → Index of first document.
+    doc2Index → Index of second document.
 
-    Output:
-        - Value between:
-              0.0 (no similarity)
-              1.0 (identical documents)
+Output:
+    Double in range [0.0, 1.0].
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Edge Cases:
-        - Invalid indices → return 0.0
-        - Comparing same document → return 1.0
-        - Zero-magnitude vector → similarity = 0.0
+
+Approach:
+    Use dot product divided by product of magnitudes.
+
+    // call dotProduct()
+    // call magnitude()
 */
 double SimilarityChecker::cosineSimilarity(int doc1Index, int doc2Index) const {
 
-    // Validate indices
     if (doc1Index < 0 || doc1Index >= static_cast<int>(tfidfVectors.size()) ||
         doc2Index < 0 || doc2Index >= static_cast<int>(tfidfVectors.size())) {
         return 0.0;
     }
 
-    // A document is always perfectly similar to itself
     if (doc1Index == doc2Index) {
         return 1.0;
     }
@@ -156,41 +141,40 @@ double SimilarityChecker::cosineSimilarity(int doc1Index, int doc2Index) const {
     const auto& vec1 = tfidfVectors[doc1Index];
     const auto& vec2 = tfidfVectors[doc2Index];
 
-    // Compute dot product and magnitudes
+    // call dotProduct()
     double dot  = dotProduct(vec1, vec2);
+
+    // call magnitude()
     double mag1 = magnitude(vec1);
     double mag2 = magnitude(vec2);
 
-    // Avoid division by zero
     if (mag1 == 0.0 || mag2 == 0.0) {
         return 0.0;
     }
 
-    // Cosine similarity formula
     return dot / (mag1 * mag2);
 }
 
 /*
-    ========================================================================
-                               compareAll()
-    ========================================================================
+-------------------------------------------------
+Function Name : compareAll()
 
-    Objective:
-        Compare every unique pair of documents and compute their similarity.
+Objective:
+    Compare all document pairs and compute similarity values.
 
-    Output:
-        Vector of tuples (docName1, docName2, similarityScore)
+Input:
+    None.
 
-    Side Effects:
-        None.
+Output:
+    Vector of tuples (docName1, docName2, similarityScore).
 
-    Approach:
-        - Nested loop:
-            i = 0 → N-1
-            j = i+1 → N-1
-        - Avoids duplicate comparisons (i,j) and (j,i)
-        - Avoids self-comparisons
-        - Retrieves names safely; if missing, uses fallback names
+Side Effect:
+    None.
+
+Approach:
+    Iterate through all document pairs and compute cosine similarity.
+
+    // call cosineSimilarity()
 */
 std::vector<std::tuple<std::string, std::string, double>> 
 SimilarityChecker::compareAll() const {
@@ -199,14 +183,12 @@ SimilarityChecker::compareAll() const {
 
     int numDocs = static_cast<int>(tfidfVectors.size());
 
-    // Iterate over all unique pairs
     for (int i = 0; i < numDocs; i++) {
         for (int j = i + 1; j < numDocs; j++) {
 
-            // Compute similarity
+            // call cosineSimilarity()
             double similarity = cosineSimilarity(i, j);
 
-            // Retrieve document names safely
             std::string name1 = (i < static_cast<int>(documentNames.size()))
                                 ? documentNames[i]
                                 : "Document" + std::to_string(i);
@@ -215,7 +197,6 @@ SimilarityChecker::compareAll() const {
                                 ? documentNames[j]
                                 : "Document" + std::to_string(j);
 
-            // Store result tuple
             results.push_back(std::make_tuple(name1, name2, similarity));
         }
     }

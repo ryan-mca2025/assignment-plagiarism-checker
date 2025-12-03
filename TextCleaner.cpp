@@ -1,57 +1,56 @@
 #include "TextCleaner.h"
-#include <algorithm>   // For std::transform
-#include <sstream>     // For std::istringstream (tokenization)
-#include <cctype>      // For std::isalnum, std::isspace
-#include <iostream>    // For debugging (optional)
+#include <algorithm>
+#include <sstream>
+#include <cctype>
+#include <iostream>
 
 /*
-    ========================================================================
-                                Constructor
-    ========================================================================
+-------------------------------------------------
+Function Name : TextCleaner (Constructor)
 
-    Objective:
-        Initialize the TextCleaner object and populate the stopWords set.
+Objective:
+    Initialize TextCleaner and load stopwords.
 
-    Input:
-        None.
+Input:
+    None.
 
-    Output:
-        None.
+Output:
+    TextCleaner object initialized.
 
-    Side Effects:
-        Calls initializeStopWords() to load common English stopwords.
+Side Effect:
+    Loads stopwords into internal set.
+
+Approach:
+    Calls stopword initialization routine.
+
+    // call initializeStopWords()
 */
 TextCleaner::TextCleaner() {
+    // call initializeStopWords()
     initializeStopWords();
 }
 
 /*
-    ========================================================================
-                           initializeStopWords()
-    ========================================================================
+-------------------------------------------------
+Function Name : initializeStopWords()
 
-    Objective:
-        Fill the stopWords set with frequently occurring English words that 
-        typically carry low semantic meaning and do not contribute to 
-        plagiarism detection.
+Objective:
+    Fill stopWords set with common English words.
 
-    Input:
-        None.
+Input:
+    None.
 
-    Output:
-        None.
+Output:
+    None.
 
-    Side Effects:
-        Inserts dozens of predefined stopwords into the internal set.
+Side Effect:
+    Populates internal stopWords container.
 
-    Notes:
-        - These words are common function/structure words (e.g., "the", "is").
-        - Using a vector for list and then inserting into a set gives O(n) load time.
-        - Lookup during filtering is O(1) average due to unordered_set.
+Approach:
+    Insert predefined words into unordered_set.
 */
 void TextCleaner::initializeStopWords() {
 
-    // Predefined English stopwords
     std::vector<std::string> words = {
         "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
         "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
@@ -64,75 +63,65 @@ void TextCleaner::initializeStopWords() {
         "come", "made", "may", "part"
     };
 
-    // Insert each word into the unordered_set
     for (const auto& word : words) {
         stopWords.insert(word);
     }
 }
 
 /*
-    ========================================================================
-                                 toLower()
-    ========================================================================
+-------------------------------------------------
+Function Name : toLower()
 
-    Objective:
-        Convert the entire input string into lowercase characters.
+Objective:
+    Convert input text to lowercase.
 
-    Input:
-        text → original or partially cleaned string.
+Input:
+    text → input string.
 
-    Output:
-        Lowercase version of the string.
+Output:
+    Lowercase version of the text.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Use std::transform() to apply ::tolower on each character.
+Approach:
+    Apply ::tolower to each character.
 */
 std::string TextCleaner::toLower(const std::string& text) const {
     std::string result = text;
-
-    // Convert each character to lowercase using ::tolower
     std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-
     return result;
 }
 
 /*
-    ========================================================================
-                           removePunctuation()
-    ========================================================================
+-------------------------------------------------
+Function Name : removePunctuation()
 
-    Objective:
-        Remove punctuation from the input string while preserving alphanumeric
-        characters and whitespace. Punctuation is replaced with spaces to avoid
-        merging words incorrectly.
+Objective:
+    Remove punctuation and replace with space.
 
-    Input:
-        text → raw or lowercased string.
+Input:
+    text → string with punctuation.
 
-    Output:
-        A new string without punctuation.
+Output:
+    Cleaned string with punctuation removed.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Loop through each character:
-              If alphanumeric or whitespace → keep it
-              Else → replace with space
-        - reserve() used to avoid reallocations
+
+Approach:
+    Replace non-alphanumeric characters with space.
 */
 std::string TextCleaner::removePunctuation(const std::string& text) const {
     std::string result;
-    result.reserve(text.size());  // Optimization: reserve memory
+    result.reserve(text.size());
 
     for (char c : text) {
         if (std::isalnum(c) || std::isspace(c)) {
-            result += c;      // Keep valid characters
+            result += c;
         } else {
-            result += ' ';    // Replace punctuation with space
+            result += ' ';
         }
     }
 
@@ -140,26 +129,23 @@ std::string TextCleaner::removePunctuation(const std::string& text) const {
 }
 
 /*
-    ========================================================================
-                           removeStopWords()
-    ========================================================================
+-------------------------------------------------
+Function Name : removeStopWords()
 
-    Objective:
-        Remove all stopwords from a vector of tokens.
+Objective:
+    Remove common meaningless words from token list.
 
-    Input:
-        tokens → vector<string> that may contain stopwords.
+Input:
+    tokens → vector of words.
 
-    Output:
-        New vector<string> with stopwords removed.
+Output:
+    Vector without stopwords.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Iterate through tokens.
-        - If token not in stopWords → keep it.
-        - Ignore empty strings.
+Approach:
+    Keep tokens that are not in stopWords set.
 */
 std::vector<std::string> TextCleaner::removeStopWords(
         const std::vector<std::string>& tokens) const {
@@ -167,7 +153,6 @@ std::vector<std::string> TextCleaner::removeStopWords(
     std::vector<std::string> filtered;
 
     for (const auto& token : tokens) {
-        // Only keep tokens not in stopword set
         if (stopWords.find(token) == stopWords.end() && !token.empty()) {
             filtered.push_back(token);
         }
@@ -177,32 +162,31 @@ std::vector<std::string> TextCleaner::removeStopWords(
 }
 
 /*
-    ========================================================================
-                                tokenize()
-    ========================================================================
+-------------------------------------------------
+Function Name : tokenize()
 
-    Objective:
-        Split a string into individual tokens based on whitespace.
+Objective:
+    Split text into words.
 
-    Input:
-        text → cleaned or partially cleaned string.
+Input:
+    text → cleaned string.
 
-    Output:
-        vector<string> of individual tokens.
+Output:
+    Vector of tokens.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Use std::istringstream to extract space-separated words.
+Inside Function:
+Approach:
+    Use string stream to extract words.
 */
 std::vector<std::string> TextCleaner::tokenize(const std::string& text) const {
 
     std::vector<std::string> tokens;
-    std::istringstream iss(text);   // Create stream from text
+    std::istringstream iss(text);
     std::string token;
 
-    // Extract tokens separated by whitespace
     while (iss >> token) {
         if (!token.empty()) {
             tokens.push_back(token);
@@ -213,41 +197,41 @@ std::vector<std::string> TextCleaner::tokenize(const std::string& text) const {
 }
 
 /*
-    ========================================================================
-                                preprocess()
-    ========================================================================
+-------------------------------------------------
+Function Name : preprocess()
 
-    Objective:
-        Run the complete text preprocessing pipeline:
-            1. Convert text to lowercase
-            2. Remove punctuation
-            3. Tokenize text into words
-            4. Remove stopwords
+Objective:
+    Perform full text cleaning.
 
-    Input:
-        text → raw document content.
+Input:
+    text → raw document.
 
-    Output:
-        Vector<string> containing cleaned, normalized tokens.
+Output:
+    Vector of cleaned tokens.
 
-    Side Effects:
-        None.
+Side Effect:
+    None.
 
-    Approach:
-        - Each transformation step feeds into the next.
+Approach:
+    Apply lowercase, punctuation removal, tokenization and stopword filtering.
+
+    // call toLower()
+    // call removePunctuation()
+    // call tokenize()
+    // call removeStopWords()
 */
 std::vector<std::string> TextCleaner::preprocess(const std::string& text) const {
 
-    // Step 1: Lowercase the text
+    // call toLower()
     std::string lowerText = toLower(text);
 
-    // Step 2: Remove punctuation
+    // call removePunctuation()
     std::string noPunct = removePunctuation(lowerText);
 
-    // Step 3: Tokenize into words
+    // call tokenize()
     std::vector<std::string> tokens = tokenize(noPunct);
 
-    // Step 4: Remove stopwords
+    // call removeStopWords()
     std::vector<std::string> cleaned = removeStopWords(tokens);
 
     return cleaned;

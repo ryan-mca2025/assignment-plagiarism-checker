@@ -1,146 +1,109 @@
 #include "ReportWriter.h"
-#include <fstream>      // For writing CSV file output
-#include <iomanip>      // For controlling floating-point formatting (setprecision)
-#include <algorithm>    // General utilities (not required but safe)
-#include <iostream>     // For console output (std::cout and std::cerr)
+#include <fstream>
+#include <iomanip>
+#include <algorithm>
+#include <iostream>
 
 /*
-    ========================================================================
-                                Constructor
-    ========================================================================
+-------------------------------------------------
+Function Name : ReportWriter (Constructor)
 
-    Objective:
-        Store the output file path and plagiarism threshold so that 
-        writeCSV() can use them later.
+Objective:
+    Initialize output file path and similarity threshold.
 
-    Input:
-        - path : Location where CSV will be written.
-        - thresh : Threshold above which similarity indicates plagiarism.
+Input:
+    path   → Output CSV file path.
+    thresh → Similarity threshold.
 
-    Output:
-        None.
+Output:
+    ReportWriter object initialized.
 
-    Side Effects:
-        - Initializes internal private members.
+Side Effect:
+    Stores path and threshold internally.
+
+Inside Function:
+Approach:
+    Assign parameters to member variables.
 */
 ReportWriter::ReportWriter(const std::string& path, double thresh) 
     : outputPath(path), threshold(thresh) {
-    // Nothing else needed here; initialization is complete
 }
 
 /*
-    ========================================================================
-                               setThreshold
-    ========================================================================
+-------------------------------------------------
+Function Name : setThreshold()
 
-    Objective:
-        Update the similarity threshold.
+Objective:
+    Update plagiarism threshold.
 
-    Input:
-        thresh : a double value usually between 0.0 and 1.0.
+Input:
+    thresh → New threshold value.
 
-    Output:
-        None.
+Output:
+    None.
 
-    Side Effects:
-        Alters the behavior of writeCSV() and how it marks plagiarism.
+Side Effect:
+    Modifies internal threshold value.
 
-    Usage Example:
-        writer.setThreshold(0.80);   // Only mark > 80% as plagiarism
+Inside Function:
+Approach:
+    Assign new value to threshold variable.
 */
 void ReportWriter::setThreshold(double thresh) {
     threshold = thresh;
 }
 
 /*
-    ========================================================================
-                                 writeCSV
-    ========================================================================
+-------------------------------------------------
+Function Name : writeCSV()
 
-    Objective:
-        Generate a CSV file containing plagiarism comparison results.
+Objective:
+    Generate plagiarism report as CSV file.
 
-    Input:
-        results: vector of tuples in the form:
-            ( studentName1, studentName2, similarityScore )
+Input:
+    results → Vector of results containing:
+              (document1, document2, similarity score).
 
-        similarityScore is expressed as:
-            - A double between 0.0 and 1.0 where
-                  0.0 = no similarity,
-                  1.0 = identical.
+Output:
+    A CSV file written to disk.
 
-    Output:
-        A fully formatted CSV file written to disk.
+Side Effect:
+    Writes output file and prints to console.
 
-    Side Effects:
-        - Opens and writes to outputPath.
-        - Prints messages to console.
-        - Overwrites existing CSV without warning.
-
-    Approach:
-        1. Attempt to open output file using ofstream.
-        2. Write CSV header: "Student Pair,Similarity Percentage,Plagiarized"
-        3. Iterate through results:
-                - Extract student names and similarity score.
-                - Format similarity into percentage.
-                - Check if > threshold → "Yes" else "No".
-                - Write row to CSV.
-        4. Close file.
-        5. Print confirmation message.
-
-    Notes:
-        - setprecision(2) ensures similarity percentage shows exactly 2 decimals.
-        - Quotes around the pair ensure commas inside names don't break CSV.
+Inside Function:
+Approach:
+    Open file, write header, write each result row, and close file.
 */
-void ReportWriter::writeCSV(const std::vector<std::tuple<std::string, std::string, double>>& results) const {
+void ReportWriter::writeCSV(
+        const std::vector<std::tuple<std::string, std::string, double>>& results) const {
 
-    std::ofstream file(outputPath);   // Step 1: Try to open file for writing
+    std::ofstream file(outputPath);
 
     if (!file.is_open()) {
-        // If file couldn't be opened, print an error and exit early
         std::cerr << "Error: Cannot open output file: " << outputPath << std::endl;
         return;
     }
 
-    // Step 2: Write CSV header row
-    // The header explains what each column represents.
     file << "Student Pair,Similarity Percentage,Plagiarized\n";
 
-    // Step 3: Process each result tuple
     for (const auto& result : results) {
 
-        // Extract individual fields from tuple
-        std::string student1 = std::get<0>(result);     // Name #1
-        std::string student2 = std::get<1>(result);     // Name #2
-        double similarity = std::get<2>(result);        // Value 0.0–1.0
+        std::string student1 = std::get<0>(result);
+        std::string student2 = std::get<1>(result);
+        double similarity = std::get<2>(result);
 
-        // Format "Student1 vs Student2"
         std::string pair = student1 + " vs " + student2;
 
-        // Convert similarity (0–1) to percentage (0–100)
         double percentage = similarity * 100.0;
 
-        // Determine plagiarism flag
-        // Uses the stored threshold:
-        //      similarity > threshold  → "Yes"
-        //      otherwise               → "No"
         std::string plagiarized = (similarity > threshold) ? "Yes" : "No";
 
-        // Write formatted data into CSV
-        // Additional formatting:
-        //  - setprecision(2) prints values like "87.32%"
-        //  - fixed ensures trailing zeros if needed ("87.30")
         file << std::fixed << std::setprecision(2);
 
-        // Output row:
-        //   "Student1 vs Student2",87.32%,Yes
-        // Quotes around pair prevent comma issues in CSV parsing.
         file << "\"" << pair << "\"," << percentage << "%," << plagiarized << "\n";
     }
 
-    // Step 4: Close file once writing is complete
     file.close();
 
-    // Step 5: Notify user via console
     std::cout << "Report written to: " << outputPath << std::endl;
 }

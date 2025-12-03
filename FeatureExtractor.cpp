@@ -4,28 +4,52 @@
 #include <set>
 
 /*
-    Constructor
+-------------------------------------------------
+Function Name : FeatureExtractor (Constructor)
 
-    Approach:
-        - Store incoming documents.
-        - Immediately build vocabulary from them.
+Objective:
+    Initialize the FeatureExtractor with preprocessed documents and prepare vocabulary.
+
+Input:
+    docs → Vector containing tokenized words of all documents.
+
+Output:
+    Object of FeatureExtractor with documents loaded.
+
+Side Effect:
+    Builds vocabulary immediately after object creation.
+
+
+Approach:
+    Assign input documents and immediately call buildVocabulary().
+
+    // call that function
 */
 FeatureExtractor::FeatureExtractor(const std::vector<std::vector<std::string>>& docs) 
     : documents(docs) {
+    // call buildVocabulary()
     buildVocabulary();
 }
 
 /*
-    buildVocabulary()
+-------------------------------------------------
+Function Name : buildVocabulary()
 
-    Approach:
-        - Use std::set to maintain unique sorted terms.
-        - Insert all terms from all documents.
-        - Convert set to vector for final vocabulary.
+Objective:
+    Create a unique list of all words across all documents.
 
-    Line Explanation:
-        vocabSet.insert(word);     -> ensures uniqueness
-        vocabulary.assign(...)     -> converts set into vector
+Input:
+    None (uses internal documents list).
+
+Output:
+    Updates the vocabulary vector with unique words.
+
+Side Effect:
+    Modifies internal vocabulary container.
+
+
+Approach:
+    Collect words in a set to avoid duplicates and convert into vector.
 */
 void FeatureExtractor::buildVocabulary() {
     std::set<std::string> vocabSet;
@@ -37,16 +61,29 @@ void FeatureExtractor::buildVocabulary() {
         }
     }
 
-    // Convert set into vector for indexing and consistency
+    // Convert set into vector
     vocabulary.assign(vocabSet.begin(), vocabSet.end());
 }
 
 /*
-    computeTF()
+-------------------------------------------------
+Function Name : computeTF()
 
-    Approach:
-        - Count each term's occurrences using a map.
-        - Divide each count by the total number of words to get TF.
+Objective:
+    Calculate term frequency for a single document.
+
+Input:
+    document → Tokenized single document.
+
+Output:
+    Map of word → Term Frequency (TF) value.
+
+Side Effect:
+    None.
+
+
+Approach:
+    Count word occurrences and divide by total word count.
 */
 std::map<std::string, double> FeatureExtractor::computeTF(const std::vector<std::string>& document) const {
     std::map<std::string, double> tf;
@@ -64,7 +101,7 @@ std::map<std::string, double> FeatureExtractor::computeTF(const std::vector<std:
 
     double totalTerms = static_cast<double>(document.size());
 
-    // Convert counts to term frequency
+    // Convert counts to TF values
     for (const auto& pair : termCount) {
         tf[pair.first] = static_cast<double>(pair.second) / totalTerms;
     }
@@ -73,15 +110,24 @@ std::map<std::string, double> FeatureExtractor::computeTF(const std::vector<std:
 }
 
 /*
-    computeIDF()
+-------------------------------------------------
+Function Name : computeIDF()
 
-    Approach:
-        - For each term in vocabulary, count number of documents containing it.
-        - Apply IDF formula: log10(totalDocs / docCount)
+Objective:
+    Compute Inverse Document Frequency (IDF) for each vocabulary word.
 
-    Line Explanation:
-        std::find(doc.begin(), doc.end(), term) != doc.end()
-            → checks whether the term exists in the document.
+Input:
+    None (uses global vocabulary and documents).
+
+Output:
+    Map of word → IDF value.
+
+Side Effect:
+    None.
+
+
+Approach:
+    Count how many documents contain each word and apply IDF formula.
 */
 std::map<std::string, double> FeatureExtractor::computeIDF() const {
     std::map<std::string, double> idf;
@@ -95,7 +141,7 @@ std::map<std::string, double> FeatureExtractor::computeIDF() const {
     for (const auto& term : vocabulary) {
         int docCount = 0;
 
-        // Count documents containing the term
+        // Count documents that contain the term
         for (const auto& doc : documents) {
             if (std::find(doc.begin(), doc.end(), term) != doc.end()) {
                 docCount++;
@@ -114,14 +160,27 @@ std::map<std::string, double> FeatureExtractor::computeIDF() const {
 }
 
 /*
-    computeTFIDF()
+-------------------------------------------------
+Function Name : computeTFIDF()
 
-    Approach:
-        - Clear previous TF-IDF results.
-        - Compute IDF once.
-        - For each document:
-            • Compute TF
-            • Multiply TF * IDF for every term in vocabulary.
+Objective:
+    Generate TF-IDF vectors for all documents.
+
+Input:
+    None (uses stored documents).
+
+Output:
+    Stores TF-IDF vectors internally.
+
+Side Effect:
+    Modifies tfidfVectors container.
+
+
+Approach:
+    Calculate TF and IDF, multiply them, and store per document.
+
+    // call computeIDF()
+    // call computeTF()
 */
 void FeatureExtractor::computeTFIDF() {
     tfidfVectors.clear();
@@ -130,13 +189,15 @@ void FeatureExtractor::computeTFIDF() {
         return;
     }
 
+    // call computeIDF()
     std::map<std::string, double> idf = computeIDF();
 
     for (const auto& doc : documents) {
+        // call computeTF()
         std::map<std::string, double> tf = computeTF(doc);
         std::map<std::string, double> tfidf;
 
-        // Compute TF-IDF for each vocabulary term
+        // Compute TF-IDF values
         for (const auto& term : vocabulary) {
             double tfValue = (tf.find(term) != tf.end()) ? tf.at(term) : 0.0;
             double idfValue = idf.at(term);
@@ -148,10 +209,24 @@ void FeatureExtractor::computeTFIDF() {
 }
 
 /*
-    getTFIDFVector()
+-------------------------------------------------
+Function Name : getTFIDFVector()
 
-    Approach:
-        - Safely return the TF-IDF vector if index is valid.
+Objective:
+    Retrieve TF-IDF vector for a specific document.
+
+Input:
+    docIndex → Document index.
+
+Output:
+    Corresponding TF-IDF vector map.
+
+Side Effect:
+    None.
+
+
+Approach:
+    Check bounds and return requested vector if valid.
 */
 std::map<std::string, double> FeatureExtractor::getTFIDFVector(int docIndex) const {
     if (docIndex >= 0 && docIndex < static_cast<int>(tfidfVectors.size())) {
@@ -161,20 +236,48 @@ std::map<std::string, double> FeatureExtractor::getTFIDFVector(int docIndex) con
 }
 
 /*
-    getAllTFIDFVectors()
+-------------------------------------------------
+Function Name : getAllTFIDFVectors()
 
-    Approach:
-        - Simply return full TF-IDF matrix.
+Objective:
+    Retrieve all TF-IDF vectors.
+
+Input:
+    None.
+
+Output:
+    Vector of TF-IDF maps.
+
+Side Effect:
+    None.
+
+
+Approach:
+    Return full TF-IDF container directly.
 */
 std::vector<std::map<std::string, double>> FeatureExtractor::getAllTFIDFVectors() const {
     return tfidfVectors;
 }
 
 /*
-    getVocabulary()
+-------------------------------------------------
+Function Name : getVocabulary()
 
-    Approach:
-        - Return the vocabulary as-is.
+Objective:
+    Retrieve vocabulary list.
+
+Input:
+    None.
+
+Output:
+    Vector of unique words.
+
+Side Effect:
+    None.
+
+
+Approach:
+    Return vocabulary container.
 */
 std::vector<std::string> FeatureExtractor::getVocabulary() const {
     return vocabulary;
